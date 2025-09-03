@@ -1,12 +1,13 @@
 import httpStatus from "http-status-codes";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
-import { IUser } from "./user.interface";
+import { IUser, Role } from "./user.interface";
 import { User } from "./user.model";
 import AppError from "../../errorHelper/AppError";
 import { envVariable } from "../../config/enVariable";
 import { Wallet } from "../wallet/wallet.model";
 import { WalletStatus } from "../wallet/wallet.interface";
+import { JwtPayload } from "jsonwebtoken";
 
 // create user
 const createUser = async (payload: Partial<IUser>) => {
@@ -72,6 +73,46 @@ const createUser = async (payload: Partial<IUser>) => {
   }
 };
 
+// update user
+const updateUser = async (
+  userId: string,
+  payload: Partial<IUser>,
+  decodedToken: JwtPayload
+) => {
+  const ifUserIdExist = await User.findById(userId);
+
+  if (!ifUserIdExist) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (payload.role) {
+    if (decodedToken.role === Role.USER || decodedToken.role === Role.AGENT) {
+      throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
+    }
+  }
+
+  if (payload.isActive || payload.isDeleted || payload.isVerified) {
+    if (decodedToken.role === Role.USER || decodedToken.role === Role.AGENT) {
+      throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
+    }
+  }
+
+  // password hashing
+  if (payload.password) {
+    payload.password = await bcryptjs.hash(
+      payload.password,
+      Number(envVariable.BCRYPT_SALT_ROUND)
+    );
+  }
+
+  const newUpdateUser = await User.findByIdAndUpdate(userId, payload, {
+    new: true,
+    runValidators: true,
+  });
+  return newUpdateUser;
+};
+
 export const UserService = {
   createUser,
+  updateUser,
 };

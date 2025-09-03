@@ -36,7 +36,6 @@ export const createUserZodSchema = z.object({
     .string({ error: "Address must be string" })
     .max(200, { message: "Address cannot exceed 200 characters." })
     .optional(),
-  // Wallet: z.number().optional(),
 });
 
 export const updateUserZodSchema = z.object({
