@@ -57,8 +57,28 @@ const updateUser = tryCatch(
   }
 );
 
+// get single user
+const getSingleUser = tryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const slug = req.params.slug;
+
+    const decodeToken = req.user as JwtPayload;
+    const userSlug = decodeToken.slug;
+
+    const user = await UserService.getSingleUser(slug, userSlug);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "User Retrieved Successfully",
+      data: user,
+    });
+  }
+);
+
 export const UserController = {
   createUser,
   updateUser,
   getAllUsers,
+  getSingleUser,
 };

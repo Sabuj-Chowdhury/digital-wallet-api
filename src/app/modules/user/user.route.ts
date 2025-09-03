@@ -21,3 +21,9 @@ userRouter.patch(
   checkAuth(...Object.values(Role)),
   UserController.updateUser
 );
+
+userRouter.get(
+  "/:slug",
+  checkAuth(...Object.values(Role)),
+  UserController.getSingleUser
+);

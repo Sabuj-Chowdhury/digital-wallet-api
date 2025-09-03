@@ -136,8 +136,29 @@ const updateUser = async (
   return newUpdateUser;
 };
 
+// get single user
+const getSingleUser = async (slug: string, userSlug: string) => {
+  const user = await User.findOne({ slug }).populate(
+    "wallet",
+    "balance status"
+  );
+
+  if (!user) {
+    throw new AppError(httpStatus.BAD_REQUEST, "User not found.");
+  }
+
+  if (userSlug !== user.slug) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You can not see Other user information"
+    );
+  }
+  return user;
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
   updateUser,
+  getSingleUser,
 };
