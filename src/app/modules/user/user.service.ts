@@ -73,6 +73,22 @@ const createUser = async (payload: Partial<IUser>) => {
   }
 };
 
+// get all user ->ADMIN
+const getAllUsers = async () => {
+  const users = await User.find({ role: "USER" }).populate(
+    "wallet",
+    "_id balance status"
+  );
+  const totalUsers = await User.countDocuments({ role: "USER" });
+
+  return {
+    meta: {
+      total: totalUsers,
+    },
+    users: users,
+  };
+};
+
 // update user
 const updateUser = async (
   userId: string,
@@ -114,5 +130,6 @@ const updateUser = async (
 
 export const UserService = {
   createUser,
+  getAllUsers,
   updateUser,
 };

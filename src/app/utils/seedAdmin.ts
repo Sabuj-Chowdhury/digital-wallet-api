@@ -23,7 +23,6 @@ export const seedAdmin = async () => {
       email: envVariable.ADMIN_EMAIL,
       password: hashedPassword,
       isVerified: true,
-
       slug: "",
     };
 

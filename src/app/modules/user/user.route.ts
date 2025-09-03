@@ -13,6 +13,8 @@ userRouter.post(
   UserController.createUser
 );
 
+userRouter.get("/users", checkAuth(Role.ADMIN), UserController.getAllUsers);
+
 userRouter.patch(
   "/:id",
   validateRequest(updateUserZodSchema),

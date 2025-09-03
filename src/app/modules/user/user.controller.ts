@@ -21,6 +21,17 @@ const createUser = tryCatch(
   }
 );
 
+// get all user --> ADMIN
+const getAllUsers = tryCatch(async (req: Request, res: Response) => {
+  const users = await UserService.getAllUsers();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Users retrieved Successfully",
+    data: users,
+  });
+});
+
 // user update
 const updateUser = tryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -47,4 +58,5 @@ const updateUser = tryCatch(
 export const UserController = {
   createUser,
   updateUser,
+  getAllUsers,
 };
