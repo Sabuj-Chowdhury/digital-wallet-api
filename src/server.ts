@@ -1,4 +1,3 @@
-import express from "express";
 import { Server } from "http";
 import mongoose from "mongoose";
 import { envVariable } from "./app/config/enVariable";
