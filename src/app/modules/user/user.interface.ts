@@ -1,22 +1,35 @@
+import { Types } from "mongoose";
+
 export enum Role {
   ADMIN = "ADMIN",
   USER = "USER",
   AGENT = "AGENT",
 }
 
-export enum AccountStatus {
+export interface IAuthProvider {
+  provider: "credential" | "google";
+  providerId: string;
+}
+
+export enum IsActive {
   ACTIVE = "ACTIVE",
-  PENDING = "PENDING",
-  SUSPENDED = "SUSPENDED",
+  INACTIVE = "INACTIVE",
+  BLOCKED = "BLOCKED",
 }
 
 export interface IUser {
+  _id?: Types.ObjectId;
   name: string;
-  email?: string;
+  slug: string;
   phone: string;
-  role: Role;
-  status: AccountStatus;
+  email?: string;
   password?: string;
-  approved: boolean; // required for agents
-  commissionRate?: number;
+  picture?: string;
+  address?: string;
+  isDeleted?: boolean;
+  isActive?: IsActive;
+  isVerified?: boolean;
+  role: Role;
+  auth: IAuthProvider[];
+  wallet?: Types.ObjectId;
 }
