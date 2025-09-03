@@ -6,11 +6,6 @@ export enum Role {
   AGENT = "AGENT",
 }
 
-export interface IAuthProvider {
-  provider: "credential" | "google";
-  providerId: string;
-}
-
 export enum IsActive {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
@@ -30,6 +25,5 @@ export interface IUser {
   isActive?: IsActive;
   isVerified?: boolean;
   role: Role;
-  auth: IAuthProvider[];
   wallet?: Types.ObjectId;
 }
