@@ -8,6 +8,8 @@ import { envVariable } from "../../config/enVariable";
 import { Wallet } from "../wallet/wallet.model";
 import { WalletStatus } from "../wallet/wallet.interface";
 import { JwtPayload } from "jsonwebtoken";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { userConstants } from "./user.constants";
 
 // create user
 const createUser = async (payload: Partial<IUser>) => {
@@ -74,18 +76,24 @@ const createUser = async (payload: Partial<IUser>) => {
 };
 
 // get all user ->ADMIN
-const getAllUsers = async () => {
-  const users = await User.find({ role: "USER" }).populate(
-    "wallet",
-    "_id balance status"
-  );
-  const totalUsers = await User.countDocuments({ role: "USER" });
+const getAllUsers = async (query: Record<string, string>) => {
+  const queryBuilder = new QueryBuilder(User.find(), query);
+
+  const userData = queryBuilder
+    .filter()
+    .search(userConstants)
+    .sort()
+    .fields()
+    .paginate();
+
+  const [data, meta] = await Promise.all([
+    userData.build(),
+    queryBuilder.getMeta(),
+  ]);
 
   return {
-    meta: {
-      total: totalUsers,
-    },
-    users: users,
+    data,
+    meta,
   };
 };
 

@@ -23,12 +23,14 @@ const createUser = tryCatch(
 
 // get all user --> ADMIN
 const getAllUsers = tryCatch(async (req: Request, res: Response) => {
-  const users = await UserService.getAllUsers();
+  const query = req.query;
+  const users = await UserService.getAllUsers(query as Record<string, string>);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Users retrieved Successfully",
-    data: users,
+    meta: users.meta,
+    data: users.data,
   });
 });
 
