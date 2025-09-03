@@ -2,6 +2,7 @@ import { Server } from "http";
 import mongoose from "mongoose";
 import { envVariable } from "./app/config/enVariable";
 import app from "./app";
+import { seedAdmin } from "./app/utils/seedAdmin";
 
 let server: Server;
 
@@ -18,7 +19,12 @@ const startServer = async () => {
   }
 };
 
-startServer();
+// ifi function
+(async () => {
+  await startServer();
+  // admin
+  await seedAdmin();
+})();
 
 // uncaught exception error
 process.on("uncaughtException", (error) => {
