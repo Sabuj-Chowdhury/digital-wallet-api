@@ -5,6 +5,7 @@ import httpStatus from "http-status-codes";
 import tryCatch from "../../utils/tryCatch";
 import { AgentService } from "./agent.service";
 import { sendResponse } from "../../utils/sendResponse";
+import AppError from "../../errorHelper/AppError";
 
 const cashIn = tryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -40,11 +41,21 @@ const cashOut = tryCatch(
 
 // agent wallet update
 const suspendedWallet = tryCatch(async (req: Request, res: Response) => {
+  const { agentId, status } = req.body;
+
+  if (status === "ACTIVE" || status === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "The Agent will only be APPROVED or SUSPENDED"
+    );
+  }
+
+  const agent = await AgentService.suspendedWallet(agentId, status);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
     message: "Agent Wallet status updated",
-    data: {},
+    data: agent,
   });
 });
 

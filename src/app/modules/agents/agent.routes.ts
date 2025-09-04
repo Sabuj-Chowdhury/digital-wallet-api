@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { cashInOrOutSchema } from "./agent.validation";
+import { agentStatusSchema, cashInOrOutSchema } from "./agent.validation";
 import { Role } from "../user/user.interface";
 import { AgentController } from "./agent.controller";
 
@@ -23,7 +23,7 @@ agentRouter.post(
 
 agentRouter.patch(
   "/status",
-  checkAuth(Role.AGENT, Role.ADMIN),
-  //   validateRequest(agentStatusSchema),
+  checkAuth(Role.ADMIN),
+  validateRequest(agentStatusSchema),
   AgentController.suspendedWallet
 );
