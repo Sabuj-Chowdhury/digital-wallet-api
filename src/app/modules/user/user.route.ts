@@ -4,6 +4,7 @@ import { createUserZodSchema, updateUserZodSchema } from "./user.validation";
 import { UserController } from "./user.controller";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "./user.interface";
+import { addOrWithdrewMoneyZodSchema } from "../wallet/wallet.validation";
 
 export const userRouter = Router();
 
@@ -26,4 +27,13 @@ userRouter.get(
   "/:slug",
   checkAuth(...Object.values(Role)),
   UserController.getSingleUser
+);
+
+// ---------------user Wallet Route-----------
+
+userRouter.post(
+  "/add-money",
+  checkAuth(Role.USER),
+  validateRequest(addOrWithdrewMoneyZodSchema),
+  UserController.addMoney
 );

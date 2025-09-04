@@ -76,9 +76,25 @@ const getSingleUser = tryCatch(
   }
 );
 
+// Add money
+const addMoney = tryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const decodeToken = req.user as JwtPayload;
+    const wallet = await UserService.addMoney(req.body, decodeToken.userId);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Money added successfully",
+      data: wallet,
+    });
+  }
+);
+
 export const UserController = {
   createUser,
   updateUser,
   getAllUsers,
   getSingleUser,
+  addMoney,
 };

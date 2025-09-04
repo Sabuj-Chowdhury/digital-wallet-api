@@ -2,9 +2,9 @@ import { Response } from "express";
 
 interface IMeta {
   page?: number;
-  limit: number;
-  totalPage: number;
-  total: number;
+  limit?: number;
+  totalPage?: number;
+  total?: number;
 }
 
 interface IResponse<T> {

@@ -1,30 +1,33 @@
 import AppError from "../../errorHelper/AppError";
-import { QueryBuilder } from "../../utils/QueryBuilder";
-import { transactionConstants } from "./transaction.constant";
-import { Transaction } from "./transaction.model";
 import httpStatus from "http-status-codes";
+import { Transaction } from "./transaction.model";
 
 const getAllTransactions = async (query: Record<string, string>) => {
-  const queryBuilder = new QueryBuilder(Transaction.find(), query);
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const sort = query.sortBy || "createdAt";
 
-  const transactionData = queryBuilder
-    .filter()
-    .search(transactionConstants)
-    .sort()
-    .fields()
-    .paginate();
+  const skip = (page - 1) * limit;
 
-  const [data, meta] = await Promise.all([
-    transactionData.build(),
-    queryBuilder.getMeta(),
-  ]);
+  const transactions = await Transaction.find()
+    .populate("fromUser", "name phone role")
+    .populate("toUser", "name phone role")
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Transaction.countDocuments();
 
   return {
-    data,
-    meta,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: transactions,
   };
 };
-
 const getMyTransactions = async (
   loginSlug: string,
   paramSlug: string,
@@ -39,30 +42,37 @@ const getMyTransactions = async (
     );
   }
 
+  // 🔎 Pagination + sorting
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const sort = query.sortBy || "-createdAt"; // newest first
+  const skip = (page - 1) * limit;
+
   const filter = {
     $or: [{ fromUser: userId }, { toUser: userId }],
   };
 
-  const queryBuilder = new QueryBuilder(Transaction.find(filter), query);
-  const transactionData = queryBuilder
-    .filter()
-    .search(transactionConstants)
-    .sort()
-    .fields()
-    .paginate();
+  const transactions = await Transaction.find(filter)
+    .populate("fromUser", "name phone slug")
+    .populate("toUser", "name phone slug")
+    .sort(sort)
+    .skip(skip)
+    .limit(limit);
 
-  const [data, meta] = await Promise.all([
-    transactionData.build(),
-    queryBuilder.getMeta(),
-  ]);
+  const total = await Transaction.countDocuments(filter);
 
   return {
-    data,
-    meta,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    data: transactions,
   };
 };
 
 export const TransactionService = {
-  getMyTransactions,
   getAllTransactions,
+  getMyTransactions,
 };

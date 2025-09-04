@@ -13,11 +13,10 @@ const getAllTransactions = tryCatch(async (req: Request, res: Response) => {
     query as Record<string, string>
   );
   sendResponse(res, {
-    statusCode: httpStatus.OK,
+    statusCode: 200,
     success: true,
     message: "All Transactions retrieved Successfully",
-    meta: transactions.meta,
-    data: transactions.data,
+    data: transactions,
   });
 });
 
@@ -29,7 +28,7 @@ const getMyTransactions = tryCatch(
     const slug = req.params.slug;
     const query = req.query;
 
-    const Transactions = await TransactionService.getMyTransactions(
+    const transactions = await TransactionService.getMyTransactions(
       loginSlug,
       slug,
       userId,
@@ -40,7 +39,8 @@ const getMyTransactions = tryCatch(
       success: true,
       statusCode: httpStatus.OK,
       message: "Transactions Retrieved Successfully",
-      data: Transactions,
+      meta: transactions.meta,
+      data: transactions.data,
     });
   }
 );

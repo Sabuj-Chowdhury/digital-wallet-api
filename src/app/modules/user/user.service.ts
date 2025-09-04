@@ -10,6 +10,11 @@ import { WalletStatus } from "../wallet/wallet.interface";
 import { JwtPayload } from "jsonwebtoken";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { userConstants } from "./user.constants";
+import { Transaction } from "../transaction/transaction.model";
+import {
+  TransactionStatus,
+  TransactionType,
+} from "../transaction/transaction.interface";
 
 // create user
 const createUser = async (payload: Partial<IUser>) => {
@@ -156,9 +161,58 @@ const getSingleUser = async (slug: string, userSlug: string) => {
   return user;
 };
 
+// Add Money
+const addMoney = async (payload: { amount: number }, userId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const amount = Number(payload?.amount);
+    if (!amount || amount <= 0) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid amount");
+    }
+
+    // wallet validation
+    const wallet = await Wallet.findOne({ user: userId });
+    if (!wallet) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Wallet not found");
+    }
+    if (wallet.status === "BLOCKED") {
+      throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    }
+
+    wallet.balance += amount;
+    await wallet.save({ session });
+
+    await Transaction.create(
+      [
+        {
+          type: TransactionType.ADD_MONEY,
+          amount,
+          fromUser: null,
+          toUser: wallet.user,
+          initiatedBy: wallet.user,
+          status: TransactionStatus.COMPLETED,
+          meta: { source: "self-topUp" },
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    return wallet;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
   updateUser,
   getSingleUser,
+  addMoney,
 };
