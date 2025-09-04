@@ -228,6 +228,14 @@ Bootstrap admin via `seedAdmin.ts` using `.env` credentials.
 
 ---
 
+## Demo Admin
+Use the following demo admin credentials to log in for testing:
+
+- **Phone:** `+8801308766895`
+- **Password:** `12345678`
+
+---
+
 ## Deployment Notes
 - Deployed to Vercel
 - Configure env vars per environment
