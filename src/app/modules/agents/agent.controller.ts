@@ -25,11 +25,15 @@ const cashIn = tryCatch(
 
 const cashOut = tryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
+    const decodeToken = req.user as JwtPayload;
+    const agentId = decodeToken.userId;
+    const { userId, amount } = req.body;
+    const wallet = await AgentService.cashOut(agentId, userId, amount);
     sendResponse(res, {
       statusCode: httpStatus.OK,
       success: true,
       message: "Cash-out successful",
-      data: {},
+      data: wallet,
     });
   }
 );

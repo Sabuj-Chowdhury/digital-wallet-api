@@ -17,7 +17,7 @@ agentRouter.post(
 agentRouter.post(
   "/cash-out",
   checkAuth(Role.AGENT),
-  //   validateRequest(cashInOutSchema),
+  validateRequest(cashInOrOutSchema),
   AgentController.cashOut
 );
 
