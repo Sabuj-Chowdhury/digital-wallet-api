@@ -37,3 +37,10 @@ userRouter.post(
   validateRequest(addOrWithdrewMoneyZodSchema),
   UserController.addMoney
 );
+
+userRouter.post(
+  "/withdraw-money",
+  checkAuth(Role.USER),
+  validateRequest(addOrWithdrewMoneyZodSchema),
+  UserController.withdrawMoney
+);

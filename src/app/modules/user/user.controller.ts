@@ -91,10 +91,28 @@ const addMoney = tryCatch(
   }
 );
 
+const withdrawMoney = tryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const decodeToken = req.user as JwtPayload;
+    const wallet = await UserService.withdrawMoney(
+      req.body,
+      decodeToken.userId
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Withdraw successfully",
+      data: wallet,
+    });
+  }
+);
+
 export const UserController = {
   createUser,
   updateUser,
   getAllUsers,
   getSingleUser,
   addMoney,
+  withdrawMoney,
 };

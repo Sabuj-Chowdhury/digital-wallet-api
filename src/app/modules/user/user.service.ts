@@ -209,10 +209,74 @@ const addMoney = async (payload: { amount: number }, userId: string) => {
   }
 };
 
+// withdraw
+const withdrawMoney = async (payload: { amount: number }, userId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const amount = Number(payload?.amount);
+    if (!amount || amount <= 0) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Please, Provide a positive Number"
+      );
+    }
+
+    // wallet validation
+    const wallet = await Wallet.findOne({ user: userId });
+    // console.log(wallet);
+
+    if (!wallet) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Wallet not found");
+    }
+
+    if (wallet.status !== "ACTIVE") {
+      throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    }
+
+    // Fee (10%)
+    const fee = Math.ceil(amount * 0.1);
+    const debit = amount + fee;
+
+    if (wallet.balance < debit) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+    }
+
+    wallet.balance -= debit;
+    await wallet.save({ session });
+
+    await Transaction.create(
+      [
+        {
+          type: TransactionType.WITHDRAW,
+          amount,
+          fee,
+          fromUser: wallet.user,
+          toUser: null,
+          initiatedBy: wallet.user,
+          status: TransactionStatus.COMPLETED,
+          meta: { source: "self-withdrawal" },
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    return wallet;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
   updateUser,
   getSingleUser,
   addMoney,
+  withdrawMoney,
 };
