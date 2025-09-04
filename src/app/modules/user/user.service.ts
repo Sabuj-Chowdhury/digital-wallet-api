@@ -272,6 +272,80 @@ const withdrawMoney = async (payload: { amount: number }, userId: string) => {
   }
 };
 
+// send money
+const sendMoney = async (
+  payload: { receiverId: string; amount: number },
+  userId: string
+) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { receiverId, amount: rawAmount } = payload;
+    const amount = Number(rawAmount);
+
+    if (!receiverId)
+      throw new AppError(httpStatus.BAD_REQUEST, "receiverId is required");
+    if (!amount || amount <= 0)
+      throw new AppError(httpStatus.BAD_REQUEST, "Invalid amount");
+    if (receiverId === userId)
+      throw new AppError(httpStatus.BAD_REQUEST, "Cannot send money to self");
+
+    // fetch wallets
+    const senderWallet = await Wallet.findOne({ user: userId });
+    const receiverWallet = await Wallet.findOne({ user: receiverId });
+
+    if (!senderWallet)
+      throw new AppError(httpStatus.NOT_FOUND, "Sender wallet not found");
+    if (!receiverWallet)
+      throw new AppError(httpStatus.NOT_FOUND, "Receiver wallet not found");
+    if (senderWallet.status !== "ACTIVE")
+      throw new AppError(httpStatus.BAD_REQUEST, "Sender wallet blocked");
+    if (receiverWallet.status !== "ACTIVE")
+      throw new AppError(httpStatus.BAD_REQUEST, "Receiver wallet blocked");
+
+    // Fee (5%)
+    const fee = Math.ceil(amount * 0.05);
+    const debit = amount + fee;
+
+    if (senderWallet.balance < debit)
+      throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+
+    // update balances
+    senderWallet.balance -= debit;
+    receiverWallet.balance += amount;
+
+    await senderWallet.save({ session });
+    await receiverWallet.save({ session });
+
+    // create single transaction record (sender-side only)
+    await Transaction.create(
+      [
+        {
+          type: TransactionType.SEND_MONEY,
+          amount,
+          fee,
+          fromUser: senderWallet.user,
+          toUser: receiverWallet.user,
+          initiatedBy: senderWallet.user,
+          status: TransactionStatus.COMPLETED,
+          meta: { method: "Send Money" },
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    return { senderWallet, receiverWallet, fee };
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
@@ -279,4 +353,5 @@ export const UserService = {
   getSingleUser,
   addMoney,
   withdrawMoney,
+  sendMoney,
 };

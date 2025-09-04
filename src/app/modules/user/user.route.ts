@@ -4,7 +4,10 @@ import { createUserZodSchema, updateUserZodSchema } from "./user.validation";
 import { UserController } from "./user.controller";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { Role } from "./user.interface";
-import { addOrWithdrewMoneyZodSchema } from "../wallet/wallet.validation";
+import {
+  addOrWithdrewMoneyZodSchema,
+  sendMoneyZodSchema,
+} from "../wallet/wallet.validation";
 
 export const userRouter = Router();
 
@@ -43,4 +46,11 @@ userRouter.post(
   checkAuth(Role.USER),
   validateRequest(addOrWithdrewMoneyZodSchema),
   UserController.withdrawMoney
+);
+
+userRouter.post(
+  "/send-money",
+  checkAuth(Role.USER),
+  validateRequest(sendMoneyZodSchema),
+  UserController.sendMoney
 );
