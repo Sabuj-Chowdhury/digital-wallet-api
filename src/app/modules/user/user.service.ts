@@ -346,6 +346,25 @@ const sendMoney = async (
   }
 };
 
+// user wallet status update => admin
+const blockWallet = async (userId: string, status: WalletStatus) => {
+  const user = await User.findById(userId).populate(
+    "wallet",
+    "_id balance status"
+  );
+
+  // console.log(user);
+  if (!user || user.role !== "USER") {
+    throw new AppError(httpStatus.BAD_REQUEST, "User not found");
+  }
+
+  const updateUser = user.wallet as JwtPayload;
+
+  updateUser.status = status;
+  await updateUser.save();
+  return user;
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
@@ -354,4 +373,5 @@ export const UserService = {
   addMoney,
   withdrawMoney,
   sendMoney,
+  blockWallet,
 };

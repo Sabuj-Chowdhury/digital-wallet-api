@@ -6,6 +6,7 @@ import tryCatch from "../../utils/tryCatch";
 import { UserService } from "./user.service";
 import { sendResponse } from "../../utils/sendResponse";
 import { JwtPayload } from "jsonwebtoken";
+import AppError from "../../errorHelper/AppError";
 
 // create user
 const createUser = tryCatch(
@@ -127,6 +128,30 @@ const sendMoney = tryCatch(
   }
 );
 
+// user wallet status update
+const blockWallet = tryCatch(async (req: Request, res: Response) => {
+  // console.log("BODY:", req.body);
+
+  const { userId, status } = req.body;
+  // console.log("userId:", userId);
+  // console.log("status:", status);
+
+  if (status === "APPROVED" || status === "SUSPENDED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "The User will only be ACTIVE or BLOCKED"
+    );
+  }
+
+  const user = await UserService.blockWallet(userId, status);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "User Wallet status updated",
+    data: user,
+  });
+});
+
 export const UserController = {
   createUser,
   updateUser,
@@ -135,4 +160,5 @@ export const UserController = {
   addMoney,
   withdrawMoney,
   sendMoney,
+  blockWallet,
 };

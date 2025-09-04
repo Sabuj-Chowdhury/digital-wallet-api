@@ -7,6 +7,7 @@ import { Role } from "./user.interface";
 import {
   addOrWithdrewMoneyZodSchema,
   sendMoneyZodSchema,
+  userStatusZodSchema,
 } from "../wallet/wallet.validation";
 
 export const userRouter = Router();
@@ -20,19 +21,18 @@ userRouter.post(
 userRouter.get("/users", checkAuth(Role.ADMIN), UserController.getAllUsers);
 
 userRouter.patch(
+  "/status",
+  checkAuth(Role.USER, Role.ADMIN),
+  validateRequest(userStatusZodSchema),
+  UserController.blockWallet
+);
+
+userRouter.patch(
   "/:id",
   validateRequest(updateUserZodSchema),
   checkAuth(...Object.values(Role)),
   UserController.updateUser
 );
-
-userRouter.get(
-  "/:slug",
-  checkAuth(...Object.values(Role)),
-  UserController.getSingleUser
-);
-
-// ---------------user Wallet Route-----------
 
 userRouter.post(
   "/add-money",
@@ -53,4 +53,10 @@ userRouter.post(
   checkAuth(Role.USER),
   validateRequest(sendMoneyZodSchema),
   UserController.sendMoney
+);
+
+userRouter.get(
+  "/:slug",
+  checkAuth(...Object.values(Role)),
+  UserController.getSingleUser
 );

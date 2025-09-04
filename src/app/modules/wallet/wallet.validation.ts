@@ -30,3 +30,8 @@ export const createWalletZodSchema = z.object({
 export const updateWalletZodSchema = z.object({
   status: z.enum(Object.values(WalletStatus) as [string]),
 });
+
+export const userStatusZodSchema = z.object({
+  userId: z.string(),
+  status: z.enum(Object.values(WalletStatus) as [string]),
+});
