@@ -27,3 +27,5 @@ agentRouter.patch(
   validateRequest(agentStatusSchema),
   AgentController.suspendedWallet
 );
+
+agentRouter.get("/", checkAuth(Role.ADMIN), AgentController.getAllAgents);

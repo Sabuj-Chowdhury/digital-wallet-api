@@ -165,8 +165,26 @@ const suspendedWallet = async (agentId: string, status: WalletStatus) => {
   return user;
 };
 
+// get all agents
+
+const getAllAgents = async () => {
+  const agent = await User.find({ role: "AGENT" }).populate(
+    "wallet",
+    "_id balance status"
+  );
+  const totalAgent = await User.countDocuments({ role: "AGENT" });
+
+  return {
+    meta: {
+      total: totalAgent,
+    },
+    agents: agent,
+  };
+};
+
 export const AgentService = {
   cashIn,
   cashOut,
   suspendedWallet,
+  getAllAgents,
 };

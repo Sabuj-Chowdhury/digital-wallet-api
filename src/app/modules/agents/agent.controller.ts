@@ -59,8 +59,19 @@ const suspendedWallet = tryCatch(async (req: Request, res: Response) => {
   });
 });
 
+const getAllAgents = tryCatch(async (req: Request, res: Response) => {
+  const agents = await AgentService.getAllAgents();
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Agents retrieved Successfully",
+    data: agents,
+  });
+});
+
 export const AgentController = {
   cashIn,
   cashOut,
   suspendedWallet,
+  getAllAgents,
 };
