@@ -24,6 +24,6 @@ export interface IUser {
   isDeleted?: boolean;
   isActive?: IsActive;
   isVerified?: boolean;
-  role: Role;
+  role?: Role;
   wallet?: Types.ObjectId;
 }

@@ -16,8 +16,28 @@ const createUser = tryCatch(
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.CREATED,
-      message: "User Created Successfully",
+      message: "Registration Successful!",
       data: user,
+    });
+  }
+);
+
+// get user profile -> all kind user
+const getMe = tryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const decodedToken = req.user as JwtPayload;
+    const result = await UserService.getMe(decodedToken.userId);
+
+    // res.status(httpStatus.OK).json({
+    //     success: true,
+    //     message: "All Users Retrieved Successfully",
+    //     data: users
+    // })
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Your profile Retrieved Successfully",
+      data: result.data,
     });
   }
 );
@@ -161,4 +181,5 @@ export const UserController = {
   withdrawMoney,
   sendMoney,
   blockWallet,
+  getMe,
 };

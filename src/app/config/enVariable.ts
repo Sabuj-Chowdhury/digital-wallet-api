@@ -13,6 +13,7 @@ interface IEnv {
   BCRYPT_SALT_ROUND: string;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
+  FRONTEND_URL: string;
 }
 
 const requiredVariables = [
@@ -26,6 +27,7 @@ const requiredVariables = [
   "BCRYPT_SALT_ROUND",
   "ADMIN_EMAIL",
   "ADMIN_PASSWORD",
+  "FRONTEND_URL",
 ];
 
 const loadEnv = (): IEnv => {
@@ -46,6 +48,7 @@ const loadEnv = (): IEnv => {
     BCRYPT_SALT_ROUND: process.env.BCRYPT_SALT_ROUND as string,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL as string,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD as string,
+    FRONTEND_URL: process.env.FRONTEND_URL as string,
   };
 };
 

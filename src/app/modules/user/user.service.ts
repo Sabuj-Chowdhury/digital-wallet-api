@@ -365,6 +365,14 @@ const blockWallet = async (userId: string, status: WalletStatus) => {
   return user;
 };
 
+// get my profile
+const getMe = async (userId: string) => {
+  const user = await User.findById(userId).select("-password");
+  return {
+    data: user,
+  };
+};
+
 export const UserService = {
   createUser,
   getAllUsers,
@@ -374,4 +382,5 @@ export const UserService = {
   withdrawMoney,
   sendMoney,
   blockWallet,
+  getMe,
 };

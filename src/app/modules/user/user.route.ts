@@ -19,6 +19,7 @@ userRouter.post(
 );
 
 userRouter.get("/users", checkAuth(Role.ADMIN), UserController.getAllUsers);
+userRouter.get("/me", checkAuth(...Object.values(Role)), UserController.getMe);
 
 userRouter.patch(
   "/status",
