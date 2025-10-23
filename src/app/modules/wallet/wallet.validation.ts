@@ -10,7 +10,13 @@ export const addOrWithdrewMoneyZodSchema = z.object({
 });
 
 export const sendMoneyZodSchema = z.object({
-  receiverId: z.string(),
+  receiverId: z.string().optional(),
+  receiverPhone: z
+    .string({ error: "Phone Number must be string" })
+    .regex(/^(?:\+8801\d{9}|01\d{9})$/, {
+      message:
+        "Phone number must be valid for Bangladesh. Format: +8801XXXXXXXXX or 01XXXXXXXXX",
+    }),
   amount: z
     .number()
     .min(0)

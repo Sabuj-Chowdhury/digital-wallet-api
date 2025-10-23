@@ -1,7 +1,7 @@
 import httpStatus from "http-status-codes";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
-import { IUser, Role } from "./user.interface";
+import { IUser, Role, SendMoneyPayload } from "./user.interface";
 import { User } from "./user.model";
 import AppError from "../../errorHelper/AppError";
 import { envVariable } from "../../config/enVariable";
@@ -178,7 +178,10 @@ const addMoney = async (payload: { amount: number }, userId: string) => {
       throw new AppError(httpStatus.BAD_REQUEST, "Wallet not found");
     }
     if (wallet.status === "BLOCKED") {
-      throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Wallet is not active or blocked"
+      );
     }
 
     wallet.balance += amount;
@@ -193,7 +196,7 @@ const addMoney = async (payload: { amount: number }, userId: string) => {
           toUser: wallet.user,
           initiatedBy: wallet.user,
           status: TransactionStatus.COMPLETED,
-          meta: { source: "self-topUp" },
+          meta: { method: "self-topUp" },
         },
       ],
       { session }
@@ -273,28 +276,39 @@ const withdrawMoney = async (payload: { amount: number }, userId: string) => {
 };
 
 // send money
-const sendMoney = async (
-  payload: { receiverId: string; amount: number },
-  userId: string
-) => {
+const sendMoney = async (payload: SendMoneyPayload, userId: string) => {
   const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
 
-    const { receiverId, amount: rawAmount } = payload;
+    const { receiverId, receiverPhone, amount: rawAmount } = payload;
     const amount = Number(rawAmount);
 
-    if (!receiverId)
-      throw new AppError(httpStatus.BAD_REQUEST, "receiverId is required");
+    if (!receiverId && !receiverPhone)
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Receiver identifier is required (ID or phone)"
+      );
     if (!amount || amount <= 0)
       throw new AppError(httpStatus.BAD_REQUEST, "Invalid amount");
-    if (receiverId === userId)
+
+    // Find receiver user either by ID or phone
+    const receiverUser = receiverId
+      ? await User.findById(receiverId)
+      : await User.findOne({ phone: receiverPhone });
+
+    if (!receiverUser) {
+      throw new AppError(httpStatus.NOT_FOUND, "Receiver not found");
+    }
+
+    if (receiverUser._id.toString() === userId.toString()) {
       throw new AppError(httpStatus.BAD_REQUEST, "Cannot send money to self");
+    }
 
     // fetch wallets
     const senderWallet = await Wallet.findOne({ user: userId });
-    const receiverWallet = await Wallet.findOne({ user: receiverId });
+    const receiverWallet = await Wallet.findOne({ user: receiverUser._id });
 
     if (!senderWallet)
       throw new AppError(httpStatus.NOT_FOUND, "Sender wallet not found");
@@ -330,7 +344,7 @@ const sendMoney = async (
           toUser: receiverWallet.user,
           initiatedBy: senderWallet.user,
           status: TransactionStatus.COMPLETED,
-          meta: { method: "Send Money" },
+          meta: { method: "Send Money", receiverPhone: receiverUser.phone },
         },
       ],
       { session }

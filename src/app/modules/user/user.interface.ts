@@ -27,3 +27,9 @@ export interface IUser {
   role?: Role;
   wallet?: Types.ObjectId;
 }
+
+export interface SendMoneyPayload {
+  receiverId?: string;
+  receiverPhone?: string;
+  amount: number;
+}
