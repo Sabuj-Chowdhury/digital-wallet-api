@@ -22,6 +22,7 @@ userRouter.post(
 userRouter.get("/users", checkAuth(Role.ADMIN), UserController.getAllUsers);
 userRouter.get("/me", checkAuth(...Object.values(Role)), UserController.getMe);
 
+// admin
 userRouter.patch(
   "/status",
   checkAuth(Role.USER, Role.ADMIN),

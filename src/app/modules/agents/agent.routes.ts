@@ -20,7 +20,7 @@ agentRouter.post(
   validateRequest(agentCashInZodSchema),
   AgentController.cashOut
 );
-
+// admin
 agentRouter.patch(
   "/status",
   checkAuth(Role.ADMIN),
