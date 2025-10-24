@@ -334,7 +334,7 @@ const sendMoney = async (payload: SendMoneyPayload, userId: string) => {
     await receiverWallet.save({ session });
 
     // create single transaction record (sender-side only)
-    await Transaction.create(
+    const [transaction] = await Transaction.create(
       [
         {
           type: TransactionType.SEND_MONEY,
@@ -351,7 +351,13 @@ const sendMoney = async (payload: SendMoneyPayload, userId: string) => {
     );
 
     await session.commitTransaction();
-    return { senderWallet, receiverWallet, fee };
+    return {
+      senderWallet,
+      receiverWallet,
+      fee,
+      // date: Date.now(),
+      amount: transaction.amount,
+    };
   } catch (error) {
     await session.abortTransaction();
     throw error;
