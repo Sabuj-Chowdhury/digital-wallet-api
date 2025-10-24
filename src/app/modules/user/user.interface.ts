@@ -33,3 +33,8 @@ export interface SendMoneyPayload {
   receiverPhone?: string;
   amount: number;
 }
+
+export interface WithdrawMoneyPayload {
+  agentPhone: string;
+  amount: number;
+}

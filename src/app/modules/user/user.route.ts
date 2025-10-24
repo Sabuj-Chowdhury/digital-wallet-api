@@ -8,6 +8,7 @@ import {
   addOrWithdrewMoneyZodSchema,
   sendMoneyZodSchema,
   userStatusZodSchema,
+  WithdrewMoneyZodSchema,
 } from "../wallet/wallet.validation";
 
 export const userRouter = Router();
@@ -45,7 +46,7 @@ userRouter.post(
 userRouter.post(
   "/withdraw-money",
   checkAuth(Role.USER),
-  validateRequest(addOrWithdrewMoneyZodSchema),
+  validateRequest(WithdrewMoneyZodSchema),
   UserController.withdrawMoney
 );
 

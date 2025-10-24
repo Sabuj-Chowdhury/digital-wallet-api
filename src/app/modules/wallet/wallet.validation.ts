@@ -9,6 +9,21 @@ export const addOrWithdrewMoneyZodSchema = z.object({
     .positive({ message: "Balance must be positive Number" }),
 });
 
+export const WithdrewMoneyZodSchema = z.object({
+  agentPhone: z
+    .string({ error: "Phone Number must be string" })
+    .regex(/^(?:\+8801\d{9}|01\d{9})$/, {
+      message:
+        "Phone number must be valid for Bangladesh. Format: +8801XXXXXXXXX or 01XXXXXXXXX",
+    }),
+
+  amount: z
+    .number()
+    .min(0)
+    .int()
+    .positive({ message: "Balance must be positive Number" }),
+});
+
 export const sendMoneyZodSchema = z.object({
   receiverId: z.string().optional(),
   receiverPhone: z

@@ -1,7 +1,12 @@
 import httpStatus from "http-status-codes";
 import bcryptjs from "bcryptjs";
 import mongoose from "mongoose";
-import { IUser, Role, SendMoneyPayload } from "./user.interface";
+import {
+  IUser,
+  Role,
+  SendMoneyPayload,
+  WithdrawMoneyPayload,
+} from "./user.interface";
 import { User } from "./user.model";
 import AppError from "../../errorHelper/AppError";
 import { envVariable } from "../../config/enVariable";
@@ -213,53 +218,90 @@ const addMoney = async (payload: { amount: number }, userId: string) => {
 };
 
 // withdraw
-const withdrawMoney = async (payload: { amount: number }, userId: string) => {
+const withdrawMoney = async (payload: WithdrawMoneyPayload, userId: string) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const amount = Number(payload?.amount);
+    const { amount: rawAmount, agentPhone } = payload;
+
+    const amount = Number(rawAmount);
     if (!amount || amount <= 0) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
         "Please, Provide a positive Number"
       );
     }
-
-    // wallet validation
-    const wallet = await Wallet.findOne({ user: userId });
-    // console.log(wallet);
-
-    if (!wallet) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Wallet not found");
+    if (!agentPhone) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Agent phone number is required"
+      );
     }
 
-    if (wallet.status !== "ACTIVE") {
-      throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    //  Find the agent user
+    const agentUser = await User.findOne({ phone: agentPhone });
+    if (!agentUser) {
+      throw new AppError(httpStatus.NOT_FOUND, "Agent not found");
     }
 
-    // Fee (10%)
+    if (agentUser.role !== "AGENT") {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "This number does not belong to an agent"
+      );
+    }
+
+    // ✅ Fetch wallets
+    const userWallet = await Wallet.findOne({ user: userId });
+    const agentWallet = await Wallet.findOne({ user: agentUser._id });
+
+    if (!userWallet) {
+      throw new AppError(httpStatus.BAD_REQUEST, "User wallet not found");
+    }
+
+    if (!agentWallet) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Agent wallet not found");
+    }
+
+    // if (userWallet.isActive !== IsActive.ACTIVE) {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "User wallet is not active");
+    // }
+
+    // if (agentWallet.status !== "ACTIVE") {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "Agent wallet is not active");
+    // }
+
+    // ✅ Fee (10%)
     const fee = Math.ceil(amount * 0.1);
     const debit = amount + fee;
 
-    if (wallet.balance < debit) {
+    if (userWallet.balance < debit) {
       throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
     }
 
-    wallet.balance -= debit;
-    await wallet.save({ session });
+    // ✅ Update balances
+    userWallet.balance -= debit;
+    agentWallet.balance += amount;
 
-    await Transaction.create(
+    await userWallet.save({ session });
+    await agentWallet.save({ session });
+
+    // ✅ Create transaction record
+    const [transaction] = await Transaction.create(
       [
         {
           type: TransactionType.WITHDRAW,
           amount,
           fee,
-          fromUser: wallet.user,
-          toUser: null,
-          initiatedBy: wallet.user,
+          fromUser: userWallet.user,
+          toUser: agentWallet.user,
+          initiatedBy: userWallet.user,
           status: TransactionStatus.COMPLETED,
-          meta: { source: "self-withdrawal" },
+          meta: {
+            method: "Withdraw via agent",
+            agentPhone: agentUser.phone,
+          },
         },
       ],
       { session }
@@ -267,7 +309,65 @@ const withdrawMoney = async (payload: { amount: number }, userId: string) => {
 
     await session.commitTransaction();
     session.endSession();
-    return wallet;
+
+    return {
+      message: "Withdrawal successful",
+      amount: transaction.amount,
+      fee: transaction.fee,
+      // date: transaction.crear,
+      userWallet: {
+        balance: userWallet.balance,
+      },
+      agentWallet: {
+        balance: agentWallet.balance,
+      },
+      agent: {
+        name: agentUser.name,
+        phone: agentUser.phone,
+      },
+    };
+    // // wallet validation
+    // const wallet = await Wallet.findOne({ user: userId });
+    // // console.log(wallet);
+
+    // if (!wallet) {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "Wallet not found");
+    // }
+
+    // if (wallet.status !== "ACTIVE") {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    // }
+
+    // // Fee (10%)
+    // const fee = Math.ceil(amount * 0.1);
+    // const debit = amount + fee;
+
+    // if (wallet.balance < debit) {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+    // }
+
+    // wallet.balance -= debit;
+    // await wallet.save({ session });
+
+    // await Transaction.create(
+    //   [
+    //     {
+    //       type: TransactionType.WITHDRAW,
+    //       amount,
+    //       fee,
+    //       fromUser: wallet.user,
+    //       toUser: null,
+    //       initiatedBy: wallet.user,
+    //       status: TransactionStatus.COMPLETED,
+    //       meta: { source: "self-withdrawal" },
+    //     },
+    //   ],
+    //   { session }
+    // );
+
+    // await session.commitTransaction();
+    // session.endSession();
+    // return wallet;
   } catch (error) {
     await session.abortTransaction();
     session.endSession();

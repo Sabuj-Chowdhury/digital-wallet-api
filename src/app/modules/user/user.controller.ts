@@ -115,10 +115,8 @@ const addMoney = tryCatch(
 const withdrawMoney = tryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const decodeToken = req.user as JwtPayload;
-    const wallet = await UserService.withdrawMoney(
-      req.body,
-      decodeToken.userId
-    );
+    const payload = req.body;
+    const wallet = await UserService.withdrawMoney(payload, decodeToken.userId);
 
     sendResponse(res, {
       success: true,
