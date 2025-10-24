@@ -165,13 +165,94 @@ const cashIn = async (agentId: string, payload: CashInPayload) => {
   }
 };
 
-// Cash Out
-const cashOut = async (agentId: string, userId: string, amount: number) => {
+// // Cash Out
+// const cashOut = async (agentId: string, userId: string, amount: number) => {
+//   const session = await mongoose.startSession();
+//   session.startTransaction();
+
+//   try {
+//     // Verify agent
+//     const agent = await User.findById(agentId);
+//     if (!agent || agent.role !== "AGENT") {
+//       throw new AppError(
+//         httpStatus.FORBIDDEN,
+//         "Only agents can perform cash-out"
+//       );
+//     }
+//     if ((agent.wallet as JwtPayload).status === "SUSPENDED") {
+//       throw new AppError(
+//         httpStatus.BAD_REQUEST,
+//         "Agent Wallet is Suspend, Not ready to Cash-In"
+//       );
+//     }
+
+//     // Find user wallet
+//     const wallet = await Wallet.findOne({ user: userId });
+//     if (!wallet) {
+//       throw new AppError(httpStatus.NOT_FOUND, "User wallet not found");
+//     }
+//     if (wallet.status === "BLOCKED") {
+//       throw new AppError(
+//         httpStatus.BAD_REQUEST,
+//         "Wallet is not active or BLOCKED"
+//       );
+//     }
+
+//     // Fee (10%)
+//     const fee = Math.ceil(amount * 0.1);
+//     const debit = amount + fee;
+
+//     if (wallet.balance < debit) {
+//       throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+//     }
+
+//     // Update balance
+//     wallet.balance -= debit;
+//     await wallet.save({ session });
+
+//     // Transaction
+//     await Transaction.create(
+//       [
+//         {
+//           type: TransactionType.CASH_OUT,
+//           amount,
+//           fee,
+//           fromUser: userId,
+//           toUser: agentId,
+//           initiatedBy: userId,
+//           status: TransactionStatus.COMPLETED,
+//           meta: { method: "Agent Cash-Out" },
+//         },
+//       ],
+//       { session }
+//     );
+
+//     await session.commitTransaction();
+//     session.endSession();
+
+//     return wallet;
+//   } catch (err) {
+//     await session.abortTransaction();
+//     session.endSession();
+//     throw err;
+//   }
+// };
+const cashOut = async (agentId: string, payload: CashInPayload) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Verify agent
+    const { receiverPhone, amount: rawAmount } = payload;
+    const amount = Number(rawAmount);
+
+    if (!amount || amount <= 0) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Please provide a positive amount"
+      );
+    }
+
+    // ✅ Verify agent
     const agent = await User.findById(agentId);
     if (!agent || agent.role !== "AGENT") {
       throw new AppError(
@@ -179,49 +260,50 @@ const cashOut = async (agentId: string, userId: string, amount: number) => {
         "Only agents can perform cash-out"
       );
     }
-    if ((agent.wallet as JwtPayload).status === "SUSPENDED") {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        "Agent Wallet is Suspend, Not ready to Cash-In"
-      );
+
+    const agentWallet = await Wallet.findOne({ user: agent._id });
+    if (!agentWallet || agentWallet.status === "SUSPENDED") {
+      throw new AppError(httpStatus.BAD_REQUEST, "Agent wallet is not active");
     }
 
-    // Find user wallet
-    const wallet = await Wallet.findOne({ user: userId });
-    if (!wallet) {
-      throw new AppError(httpStatus.NOT_FOUND, "User wallet not found");
-    }
-    if (wallet.status === "BLOCKED") {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        "Wallet is not active or BLOCKED"
-      );
+    // ✅ Find user by phone number
+    const user = await User.findOne({ phone: receiverPhone });
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
 
-    // Fee (10%)
+    const userWallet = await Wallet.findOne({ user: user._id });
+    if (!userWallet || userWallet.status === "BLOCKED") {
+      throw new AppError(httpStatus.BAD_REQUEST, "User wallet is not active");
+    }
+
+    // ✅ Fee (10%)
     const fee = Math.ceil(amount * 0.1);
     const debit = amount + fee;
 
-    if (wallet.balance < debit) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+    if (userWallet.balance < debit) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Insufficient user balance");
     }
 
-    // Update balance
-    wallet.balance -= debit;
-    await wallet.save({ session });
+    // ✅ Update balances
+    userWallet.balance -= debit;
+    await userWallet.save({ session });
 
-    // Transaction
-    await Transaction.create(
+    agentWallet.balance += amount;
+    await agentWallet.save({ session });
+
+    // ✅ Create transaction record
+    const [transaction] = await Transaction.create(
       [
         {
           type: TransactionType.CASH_OUT,
           amount,
           fee,
-          fromUser: userId,
-          toUser: agentId,
-          initiatedBy: userId,
+          fromUser: user._id,
+          toUser: agent._id,
+          initiatedBy: user._id,
           status: TransactionStatus.COMPLETED,
-          meta: { method: "Agent Cash-Out" },
+          meta: { method: "Agent Cash-Out", receiverPhone },
         },
       ],
       { session }
@@ -230,7 +312,16 @@ const cashOut = async (agentId: string, userId: string, amount: number) => {
     await session.commitTransaction();
     session.endSession();
 
-    return wallet;
+    // ✅ Consistent return object
+    return {
+      message: "Cash-Out successful",
+      amount: transaction.amount,
+      fee: transaction.fee,
+      userWallet: { balance: userWallet.balance },
+      agentWallet: { balance: agentWallet.balance },
+      agent: { name: agent.name, phone: agent.phone },
+      user: { name: user.name, phone: user.phone },
+    };
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

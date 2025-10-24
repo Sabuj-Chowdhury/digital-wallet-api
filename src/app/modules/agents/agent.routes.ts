@@ -1,11 +1,7 @@
 import { Router } from "express";
 import { checkAuth } from "../../middlewares/checkAuth";
 import { validateRequest } from "../../middlewares/validateRequest";
-import {
-  agentCashInZodSchema,
-  agentStatusSchema,
-  cashInOrOutSchema,
-} from "./agent.validation";
+import { agentCashInZodSchema, agentStatusSchema } from "./agent.validation";
 import { Role } from "../user/user.interface";
 import { AgentController } from "./agent.controller";
 
@@ -21,7 +17,7 @@ agentRouter.post(
 agentRouter.post(
   "/cash-out",
   checkAuth(Role.AGENT),
-  validateRequest(cashInOrOutSchema),
+  validateRequest(agentCashInZodSchema),
   AgentController.cashOut
 );
 

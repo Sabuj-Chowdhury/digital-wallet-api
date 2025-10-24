@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { WalletStatus } from "../wallet/wallet.interface";
 
-export const cashInOrOutSchema = z.object({
-  userId: z.string(),
-  amount: z.number().positive({ message: "Amount must be Positive Number" }),
-});
-
 export const agentCashInZodSchema = z.object({
   receiverId: z.string().optional(),
   receiverPhone: z
