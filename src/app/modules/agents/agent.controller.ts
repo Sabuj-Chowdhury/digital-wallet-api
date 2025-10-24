@@ -12,8 +12,8 @@ const cashIn = tryCatch(
     const decodeToken = req.user as JwtPayload;
     const agentId = decodeToken.userId;
 
-    const { userId, amount } = req.body;
-    const wallet = await AgentService.cashIn(agentId, userId, amount);
+    const payload = req.body;
+    const wallet = await AgentService.cashIn(agentId, payload);
 
     sendResponse(res, {
       statusCode: httpStatus.CREATED,

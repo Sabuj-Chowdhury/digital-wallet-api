@@ -10,55 +10,72 @@ import {
   TransactionType,
 } from "../transaction/transaction.interface";
 import { WalletStatus } from "../wallet/wallet.interface";
+import { CashInPayload } from "./agent.interface";
 
-const cashIn = async (agentId: string, userId: string, amount: number) => {
+const cashIn = async (agentId: string, payload: CashInPayload) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Verify agent
-    const agent = await User.findById(agentId).populate(
-      "wallet",
-      "balance status"
-    );
+    const { receiverPhone, amount: rawAmount } = payload;
+    const amount = Number(rawAmount);
 
+    if (!amount || amount <= 0) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        "Please provide a positive amount"
+      );
+    }
+
+    // ✅ Find agent
+    const agent = await User.findById(agentId);
     if (!agent || agent.role !== "AGENT") {
       throw new AppError(
         httpStatus.FORBIDDEN,
-        "Only agents can perform Cash-In"
-      );
-    }
-    if ((agent.wallet as JwtPayload).status === "SUSPENDED") {
-      throw new AppError(
-        httpStatus.BAD_REQUEST,
-        "Agent Wallet is Suspend, Not ready to Cash-In"
+        "Only agents can perform cash-in"
       );
     }
 
-    // Find user wallet
-    const wallet = await Wallet.findOne({ user: userId });
-    if (!wallet) {
-      throw new AppError(httpStatus.NOT_FOUND, "User wallet not found");
-    }
-    if (wallet.status === "BLOCKED") {
-      throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    const agentWallet = await Wallet.findOne({ user: agent._id });
+    if (!agentWallet || agentWallet.status === "SUSPENDED") {
+      throw new AppError(httpStatus.BAD_REQUEST, "Agent wallet is not active");
     }
 
-    // Update balance
-    wallet.balance += amount;
-    await wallet.save({ session });
+    if (agentWallet.balance < amount) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Insufficient agent balance");
+    }
 
-    // transaction
-    await Transaction.create(
+    // ✅ Find user by phone
+    const user = await User.findOne({ phone: receiverPhone });
+    if (!user) {
+      throw new AppError(httpStatus.NOT_FOUND, "User not found");
+    }
+
+    const userWallet = await Wallet.findOne({ user: user._id });
+    if (!userWallet || userWallet.status === "BLOCKED") {
+      throw new AppError(httpStatus.BAD_REQUEST, "User wallet is not active");
+    }
+
+    // ✅ Update balances
+    agentWallet.cashIn = (agentWallet.cashIn || 0) + amount;
+    agentWallet.balance -= amount;
+    await agentWallet.save({ session });
+
+    userWallet.balance += amount;
+    await userWallet.save({ session });
+
+    // ✅ Create transaction record
+    const [transaction] = await Transaction.create(
       [
         {
           type: TransactionType.CASH_IN,
           amount,
-          fromUser: agentId,
-          toUser: userId,
-          initiatedBy: agentId,
+
+          fromUser: agent._id,
+          toUser: user._id,
+          initiatedBy: agent._id,
           status: TransactionStatus.COMPLETED,
-          meta: { method: "Agent Cash-In" },
+          meta: { method: "Agent Cash-In", receiverPhone },
         },
       ],
       { session }
@@ -67,7 +84,80 @@ const cashIn = async (agentId: string, userId: string, amount: number) => {
     await session.commitTransaction();
     session.endSession();
 
-    return wallet;
+    // ✅ Consistent return
+    return {
+      message: "Cash-In successful",
+      amount: transaction.amount,
+      fee: transaction.fee,
+      userWallet: {
+        balance: userWallet.balance,
+      },
+      agentWallet: {
+        balance: agentWallet.balance,
+        cashIn: agentWallet.cashIn,
+      },
+      agent: {
+        name: agent.name,
+        phone: agent.phone,
+      },
+      user: {
+        name: user.name,
+        phone: user.phone,
+      },
+    };
+
+    // // Verify agent
+    // const agent = await User.findById(agentId).populate(
+    //   "wallet",
+    //   "balance status"
+    // );
+
+    // if (!agent || agent.role !== "AGENT") {
+    //   throw new AppError(
+    //     httpStatus.FORBIDDEN,
+    //     "Only agents can perform Cash-In"
+    //   );
+    // }
+    // if ((agent.wallet as JwtPayload).status === "SUSPENDED") {
+    //   throw new AppError(
+    //     httpStatus.BAD_REQUEST,
+    //     "Agent Wallet is Suspend, Not ready to Cash-In"
+    //   );
+    // }
+
+    // // Find user wallet
+    // const wallet = await Wallet.findOne({ user: userId });
+    // if (!wallet) {
+    //   throw new AppError(httpStatus.NOT_FOUND, "User wallet not found");
+    // }
+    // if (wallet.status === "BLOCKED") {
+    //   throw new AppError(httpStatus.BAD_REQUEST, "Wallet is not active");
+    // }
+
+    // // Update balance
+    // wallet.balance += amount;
+    // await wallet.save({ session });
+
+    // // transaction
+    // await Transaction.create(
+    //   [
+    //     {
+    //       type: TransactionType.CASH_IN,
+    //       amount,
+    //       fromUser: agentId,
+    //       toUser: userId,
+    //       initiatedBy: agentId,
+    //       status: TransactionStatus.COMPLETED,
+    //       meta: { method: "Agent Cash-In" },
+    //     },
+    //   ],
+    //   { session }
+    // );
+
+    // await session.commitTransaction();
+    // session.endSession();
+
+    // return wallet;
   } catch (err) {
     await session.abortTransaction();
     session.endSession();

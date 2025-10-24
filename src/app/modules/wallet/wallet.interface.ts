@@ -11,4 +11,5 @@ export interface IWallet {
   user: Types.ObjectId;
   balance: number;
   status: WalletStatus;
+  cashIn?: number;
 }

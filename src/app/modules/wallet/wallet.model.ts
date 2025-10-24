@@ -10,6 +10,7 @@ export const walletSchema = new Schema<IWallet>(
       required: true,
     },
     balance: { type: Number, default: 50, min: 0 },
+    cashIn: { type: Number, min: 0 },
     status: {
       type: String,
       enum: Object.values(WalletStatus),
