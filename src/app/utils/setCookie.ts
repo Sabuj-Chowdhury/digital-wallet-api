@@ -14,7 +14,7 @@ export const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       // secure: envVariable.NODE_ENV === "production",
       secure: true,
       sameSite: "none",
-      expires: new Date(0),
+
       //  maxAge: envVariable.COOKIE_EXPIRE_TIME
     });
   }
@@ -25,7 +25,6 @@ export const setAuthCookie = (res: Response, tokenInfo: AuthTokens) => {
       // secure: envVariable.NODE_ENV === "production",
       secure: true,
       sameSite: "none",
-      expires: new Date(0),
     });
   }
 };

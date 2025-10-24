@@ -54,11 +54,13 @@ const logout = tryCatch(
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      expires: new Date(0),
     });
     await res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: true,
       sameSite: "none",
+      expires: new Date(0),
     });
 
     sendResponse(res, {
